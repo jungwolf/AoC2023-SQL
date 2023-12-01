@@ -52,3 +52,94 @@ order by i.lineno
   where t.digit=digit_to_replace
   and digit_to_replace is not null
 )
+
+-- let's modify to show intermediate steps
+with all_the_numbers (new_string, digit_to_replace, a_level) as (
+  select
+    i.linevalue
+    ,regexp_substr(i.linevalue,'one|two|three|four|five|six|seven|eight|nine')
+    ,0
+  from input_data i
+
+  union all
+
+  select
+    regexp_replace(new_string,digit_to_replace,t.digit,1,1)
+    , regexp_substr(regexp_replace(new_string,digit_to_replace,t.digit,1,1),'one|two|three|four|five|six|seven|eight|nine')
+    ,a_level + 1
+  from all_the_numbers i, text_numbers t, regex_search s
+  where t.word=digit_to_replace
+  and (digit_to_replace is not null and a_level < 10)
+)
+select * from all_the_numbers;
+
+
+
+
+
+
+
+
+
+
+
+
+with all_the_numbers (lineno, a_level, new_string, digit_to_replace, numdigits) as (
+  select
+    i.lineno
+    ,0
+    ,i.linevalue
+    ,regexp_substr(i.linevalue,'one|two|three|four|five|six|seven|eight|nine')
+    ,regexp_count(i.linevalue,'one|two|three|four|five|six|seven|eight|nine')
+  from input_data i
+
+  union all
+
+  select
+    lineno
+    ,a_level + 1
+    ,regexp_replace(new_string,digit_to_replace,t.digit,1,1)
+    , regexp_substr(regexp_replace(new_string,digit_to_replace,t.digit,1,1),'one|two|three|four|five|six|seven|eight|nine')
+    , regexp_count(regexp_replace(new_string,digit_to_replace,t.digit,1,1),'one|two|three|four|five|six|seven|eight|nine')
+  from all_the_numbers i, text_numbers t, regex_search s
+  where t.word=digit_to_replace
+  and (digit_to_replace is not null and a_level < 10)
+)
+select *
+from all_the_numbers
+order by lineno, a_level;
+
+
+with all_the_numbers (lineno, a_level, new_string, digit_to_replace, numdigits) as (
+  select
+    i.lineno
+    ,0
+    ,i.linevalue
+    ,regexp_substr(i.linevalue,'one|two|three|four|five|six|seven|eight|nine')
+    ,regexp_count(i.linevalue,'one|two|three|four|five|six|seven|eight|nine')
+  from input_data i
+
+  union all
+
+  select
+    lineno
+    ,a_level + 1
+    ,regexp_replace(new_string,digit_to_replace,t.digit,1,1)
+    , regexp_substr(regexp_replace(new_string,digit_to_replace,t.digit,1,1),'one|two|three|four|five|six|seven|eight|nine')
+    , regexp_count(regexp_replace(new_string,digit_to_replace,t.digit,1,1),'one|two|three|four|five|six|seven|eight|nine')
+  from all_the_numbers i, text_numbers t, regex_search s
+  where t.word=digit_to_replace
+--  and (digit_to_replace is not null and a_level < 10)
+  and numdigits > 0
+)
+--select *
+select
+  lineno
+  ,a_level
+  ,new_string
+  ,digit_to_replace
+  ,regexp_substr(new_string,'\d') d1
+  ,regexp_substr(reverse(new_string),'\d') d2
+  ,numdigits
+from all_the_numbers
+order by lineno, a_level;
