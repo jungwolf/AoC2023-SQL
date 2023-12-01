@@ -1,5 +1,5 @@
 -- like normal, input is still the same as part1
-create or replace synonym input_data for day02_part1;
+create or replace synonym input_data for day01_example;
 
 -- basically, need to replace spelled out numbers with the digit
 -- the replace() function does that
@@ -45,3 +45,31 @@ DIGIT	WORD
 9	nine
 0	zero
 */
+
+-- oh, example input doesn't have any words, so use example from part2 description
+exec drop_object_if_exists('line_number_sq','sequence');
+create sequence line_number_sq;
+
+exec drop_object_if_exists('day01_part2_example','table');
+create table day01_part2_example (lineno number, linevalue varchar2(4000));
+
+create or replace synonym input_data for day01_part2_example;
+
+--insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'
+--');
+
+insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'two1nine');
+insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'eightwothree');
+insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'abcone2threexyz');
+insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'xtwone3four');
+insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'4nineeightseven2');
+insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'zoneight234');
+insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'7pqrstsixteen');
+
+-- don't regress
+insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'1abc2');
+insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'pqr3stu8vwx');
+insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'a1b2c3d4e5f');
+insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'treb7uchet');
+
+commit;
