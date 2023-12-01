@@ -22,6 +22,22 @@ exec drop_object_if_exists('TESTTABLE','TABLE');
 create table testtable (a number);
 */
 
+-- ignores case, like the regular drop command
+-- don't work with ".." names
+create or replace procedure drop_object_if_exists(p_object_name varchar2, p_object_type varchar2) as
+  num_exists number;
+begin
+  select count(*) into num_exists
+  from user_objects a
+  where a.object_name = upper(p_object_name)
+    and a.object_type = upper(p_object_type);
+
+  if num_exists > 0 then
+    execute immediate 'drop '||p_object_type||' '||p_object_name;
+  end if;
+end;
+/
+
 
 
 
