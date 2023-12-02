@@ -143,3 +143,5 @@ select
   ,numdigits
 from all_the_numbers
 order by lineno, a_level;
+
+-- i misunderstood the requirements, on to workbook3!
