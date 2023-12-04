@@ -42,3 +42,78 @@ with text_numbers as (
 select
   sum(to_number(regexp_substr(new_string,'\d')||regexp_substr(reverse(new_string),'\d'))) calibration_sum
 from fixed_numbers;
+
+
+------------------------------------------------------------
+
+
+
+
+with text_numbers as (
+  select
+    rownum digit
+    , lower(to_char(to_date(rownum,'j'),'JSP')) spelled_digit
+  from dba_objects where rownum <= 9
+  union all
+  select rownum digit
+    , to_char(rownum) spelled_digit
+  from dba_objects where rownum <= 9
+)
+, regex_search as (
+  select
+    listagg(digit,'|') within group (order by digit) all_digits
+  from text_numbers
+)
+, first_last_text_numbers as (
+  select
+    regexp_substr(i.linevalue,s.all_digits) first_text_num
+    , reverse(regexp_substr(reverse(i.linevalue),reverse(s.all_digits))) last_text_num
+    ,i.linevalue
+  from input_data i, regex_search s
+)
+, first_last_numbers as (
+  select t1.digit first_num, t2.digit second_num
+  from first_last_text_numbers n,text_numbers t1,text_numbers t2
+  where n.first_text_num = t1.spelled_digit
+    and n.last_text_num = t2.spelled_digit
+)
+select sum(to_number(first_num||second_num)) from first_last_numbers;
+--55477
+
+
+
+
+
+
+with text_numbers as (
+  select
+    rownum digit
+    , lower(to_char(to_date(rownum,'j'),'JSP')) spelled_digit
+  from dba_objects where rownum <= 9
+  union all
+  select rownum digit
+    , to_char(rownum) spelled_digit
+  from dba_objects where rownum <= 9
+)
+, regex_search as (
+  select
+    listagg(spelled_digit,'|') within group (order by digit) all_digits
+  from text_numbers
+)
+, first_last_text_numbers as (
+  select
+    regexp_substr(i.linevalue,s.all_digits) first_text_num
+    , reverse(regexp_substr(reverse(i.linevalue),reverse(s.all_digits))) last_text_num
+    ,i.linevalue
+  from input_data i, regex_search s
+)
+, first_last_numbers as (
+  select n.linevalue,t1.digit first_num, t2.digit second_num
+  from first_last_text_numbers n,text_numbers t1,text_numbers t2
+  where n.first_text_num = t1.spelled_digit
+    and n.last_text_num = t2.spelled_digit
+)
+--select * from first_last_numbers
+select sum(to_number(first_num||second_num)) from first_last_numbers
+;
+--54431
