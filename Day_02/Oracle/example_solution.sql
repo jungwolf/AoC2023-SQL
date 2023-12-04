@@ -1,3 +1,3 @@
 -- Sample
-create or replace synonym input_data for day??_example;
+create or replace synonym input_data for day02_example;
 
