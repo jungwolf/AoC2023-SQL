@@ -87,3 +87,86 @@ insert into day02_marble_bag (num_marbles, marble_color) values (14,'blue');
 commit;
 select * from day02_marble_bag;
 -- maybe create a marble_bag synonym for part 2, who knows
+-- ug, I don't use day02... for the views
+
+exec drop_object_if_exists('day02_marble_bag','table');
+exec drop_object_if_exists('marble_bag','table');
+create table marble_bag (
+  num_marbles number,
+  marble_color varchar2(10)
+);
+--12 red cubes, 13 green cubes, and 14 blue cubes
+-- oops, they are supposed to be cubes, fix later...
+insert into marble_bag (num_marbles, marble_color) values (12,'red');
+insert into marble_bag (num_marbles, marble_color) values (13,'green');
+insert into marble_bag (num_marbles, marble_color) values (14,'blue');
+
+commit;
+select * from marble_bag;
+
+--------------------------------------------------------------------------------------------------------
+-- so now what?
+-- match up move marbles with bag marbles
+
+select m.game_num, m.move_num, m.part_num, m.num_marbles, m.marble_color
+  , b.num_marbles max_marbles
+from move_marbles m
+  , marble_bag b
+where m.marble_color = b.marble_color (+)
+/
+select * from marble_bag;
+-- whoops, kept an extra space in move_marbles
+create or replace view move_marbles as
+select p.game_num, p.game_line, p.move_num, p.move_line, p.part_num, p.part_line
+--  ,instr(p.part_line,' ')
+  ,substr(p.part_line,1,instr(p.part_line,' ')) num_marbles
+  ,substr(p.part_line,instr(p.part_line,' ')+1) marble_color
+from move_parts p
+/
+
+select m.game_num, m.move_num, m.part_num, m.num_marbles, m.marble_color
+  , b.num_marbles max_marbles
+from move_marbles m
+  , marble_bag b
+where m.marble_color = b.marble_color (+)
+/
+
+select m.game_num, m.move_num, m.part_num, m.num_marbles, m.marble_color
+  , b.num_marbles max_marbles
+  , nvl(b.num_marbles - m.num_marbles,-999) extra_marbles
+from move_marbles m
+  , marble_bag b
+where m.marble_color = b.marble_color (+)
+/
+
+select m.game_num, m.move_num, m.part_num, m.num_marbles, m.marble_color
+  , b.num_marbles max_marbles
+  , nvl(b.num_marbles - m.num_marbles,-999) marbles_remaining
+from move_marbles m
+  , marble_bag b
+where m.marble_color = b.marble_color (+)
+/
+
+select m.game_num
+  , min(nvl(b.num_marbles - m.num_marbles,-999)) min_marbles_remaining
+from move_marbles m
+  , marble_bag b
+where m.marble_color = b.marble_color (+)
+group by m.game_num
+/
+
+select sum (game_num) answer
+from (
+  select m.game_num
+    , min(nvl(b.num_marbles - m.num_marbles,-999)) min_marbles_remaining
+  from move_marbles m
+    , marble_bag b
+  where m.marble_color = b.marble_color (+)
+  group by m.game_num
+)
+where min_marbles_remaining >=0
+/
+/*
+ANSWER
+8
+*/
