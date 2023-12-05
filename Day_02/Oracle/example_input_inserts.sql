@@ -4,6 +4,8 @@ create sequence line_number_sq;
 exec drop_object_if_exists('day02_example','table');
 create table day02_example (lineno number, linevalue varchar2(4000));
 
+create or replace synonym input_data for day02_example;
+
 --insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'
 --');
 insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green');

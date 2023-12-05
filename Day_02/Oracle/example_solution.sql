@@ -63,7 +63,7 @@ create or replace view move_marbles as
 select p.game_num, p.game_line, p.move_num, p.move_line, p.part_num, p.part_line
 --  ,instr(p.part_line,' ')
   ,substr(p.part_line,1,instr(p.part_line,' ')) num_marbles
-  ,substr(p.part_line,instr(p.part_line,' ')) marble_color
+  ,substr(p.part_line,instr(p.part_line,' ')+1) marble_color
 from move_parts p
 /
 
