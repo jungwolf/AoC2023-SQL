@@ -86,6 +86,6 @@ from (
 where min_marbles_remaining >=0
 /
 /*
-ANSWER
-3059
+removing answer
+
 */
