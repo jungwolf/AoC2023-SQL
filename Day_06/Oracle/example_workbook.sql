@@ -71,3 +71,51 @@ RACE_ID	TIME	DISTANCE
 3	15	40
 4	30	200
 */
+
+-- one-liner to generate x rows
+select level from dual connect by level <= 3;
+
+-- use lateral join to generate time number of rows for a specific race
+select *
+from races r
+  , lateral(select level from dual connect by level <= r.time)
+;
+
+-- add an extra row for 0
+create or replace view races_by_hold_time as
+select r.race_id, r.time, r.distance record_distance, n.hold_seconds
+from races r
+  , lateral(select level-1 hold_seconds from dual connect by level <= r.time+1) n;
+
+-- so distance is hold_seconds * (time-hold_seconds)
+select t.*, (time-hold_seconds)*hold_seconds from races_by_hold_time t;
+
+select t.*, (time-hold_seconds)*hold_seconds my_distance from races_by_hold_time t;
+
+-- show the winning races
+select t.*, (time-hold_seconds)*hold_seconds my_distance 
+from races_by_hold_time t
+where t.record_distance < (time-hold_seconds)*hold_seconds;
+
+-- count winning races per race
+select count(*)
+from races_by_hold_time t
+where t.record_distance < (time-hold_seconds)*hold_seconds
+group by race_id;
+
+-- ug, using logs as PRODUCT() standing... EXP(SUM(LN(column)))
+select EXP(SUM(LN(the_count)))
+from (
+  select count(*) the_count
+  from races_by_hold_time t
+  where t.record_distance < (time-hold_seconds)*hold_seconds
+  group by race_id
+);
+
+select round(EXP(SUM(LN(the_count)))) answer
+from (
+  select count(*) the_count
+  from races_by_hold_time t
+  where t.record_distance < (time-hold_seconds)*hold_seconds
+  group by race_id
+);
