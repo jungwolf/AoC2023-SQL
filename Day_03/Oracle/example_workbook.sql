@@ -53,7 +53,7 @@ LINENO	THE_ROW
 */
 
 -- maybe split lines into the non-'.' parts
-select 
+select
   *
 from engine_schematic e
   ,lateral(select rownum id, column_value part, length(column_value) part_size  from table( string2rows(e.the_row,'.') )) n
@@ -61,11 +61,16 @@ where n.part is not null
 /
 /*
 LINENO	THE_ROW	ID	PART	PART_SIZE
+...
 4	......#...	7	#	1
 5	617*......	1	617*	4
 6	.....+.58.	6	+	1
 6	.....+.58.	7	58	2
 
 Almost right
-didn't think about symbols L,R of the part
+didn't think about consecutive symbols/parts
 */
+
+-- create a parts view and a symbols view, try again?
+-- still would have to handle consecutive...
+-- regex again? 
