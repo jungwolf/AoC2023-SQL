@@ -1,4 +1,14 @@
 ------------------
+-- one-liner to generate x rows
+select level from dual connect by level <= 3;
+
+-- generate number of rows based on a value in row...
+select *
+from races r
+  , lateral(select level from dual connect by level <= r.time)
+;
+
+
 try many options
 
 drop table s_2_r;
