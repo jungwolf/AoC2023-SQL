@@ -61,4 +61,18 @@ HH -> N	.	HH
 HH -> N	.	N
 */
 
-
+/*
+LINENO	LINEVALUE
+1	Time:      7  15   30
+2	Distance:  9  40  200
+*/
+select i.lineno, i.linevalue, n.id, n.column_value
+from input_data i
+  ,lateral(select rownum id, column_value from table( string2rows(i.linevalue,':') )) n;
+/*
+LINENO	LINEVALUE	ID	COLUMN_VALUE
+1	Time:      7  15   30	1	Time
+1	Time:      7  15   30	2	      7  15   30
+2	Distance:  9  40  200	1	Distance
+2	Distance:  9  40  200	2	  9  40  200
+*/
