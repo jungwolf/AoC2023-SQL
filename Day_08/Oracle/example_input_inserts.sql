@@ -1,3 +1,4 @@
+-- sample one --
 exec drop_object_if_exists('line_number_sq','sequence');
 create sequence line_number_sq;
 
@@ -21,6 +22,7 @@ insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'ZZZ =
 
 commit;
 
+-- sample two --
 exec drop_object_if_exists('line_number_sq','sequence');
 create sequence line_number_sq;
 exec drop_object_if_exists('day08_example2','table');
@@ -28,9 +30,24 @@ create table day08_example2 (lineno number, linevalue varchar2(4000));
 
 create or replace synonym input_data for day08_example2;
 
-
--- sample two --
 insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'LLR');
+insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'');
+insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'AAA = (BBB, BBB)');
+insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'BBB = (AAA, ZZZ)');
+insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'ZZZ = (ZZZ, ZZZ)');
+
+commit;
+
+
+-- sample three --
+exec drop_object_if_exists('line_number_sq','sequence');
+create sequence line_number_sq;
+exec drop_object_if_exists('day08_example3','table');
+create table day08_example3 (lineno number, linevalue varchar2(4000));
+
+create or replace synonym input_data for day08_example3;
+
+insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'LR');
 insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'');
 insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'AAA = (BBB, BBB)');
 insert into input_data (lineno, linevalue) values (line_number_sq.nextval,'BBB = (AAA, ZZZ)');
