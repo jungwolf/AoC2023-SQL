@@ -151,3 +151,148 @@ with moves(
     and n.node != 'ZZZ'
 )
 select count(*) from moves;
+
+
+
+
+
+
+
+
+
+
+
+
+
+with number_of_instructions as (
+select length(linevalue) num
+from input_data
+where lineno = 1
+)
+,lr_instructions as (
+select
+  n.id move_number
+  , mod(n.id,x.num) mod_move
+  , n.column_value direction
+from input_data i, number_of_instructions x
+  ,lateral(select rownum id, column_value from table(string2rows(i.linevalue))) n
+where lineno = 1
+)
+, nodes as (
+select
+  lineno id
+--  ,linevalue
+  ,regexp_substr(linevalue,'\w{3}',1,1) node
+  ,regexp_substr(linevalue,'\w{3}',1,2) next_node_l
+  ,regexp_substr(linevalue,'\w{3}',1,3) next_node_r
+from input_data where lineno >= 3
+)
+select * from nodes;
+
+
+
+
+
+
+with number_of_instructions as (
+select /*+ materialize */ length(linevalue) num
+from input_data
+where lineno = 1
+)
+,lr_instructions as (
+select /*+ materialize */
+  n.id move_number
+  , mod(n.id,x.num) mod_move
+  , n.column_value direction
+from input_data i, number_of_instructions x
+  ,lateral(select rownum id, column_value from table(string2rows(i.linevalue))) n
+where lineno = 1
+)
+, nodes as (
+select /*+ materialize */
+  lineno id
+--  ,linevalue
+  ,regexp_substr(linevalue,'\w{3}',1,1) node
+  ,regexp_substr(linevalue,'\w{3}',1,2) next_node_l
+  ,regexp_substr(linevalue,'\w{3}',1,3) next_node_r
+from input_data where lineno >= 3
+)
+select * from nodes;
+
+
+with number_of_instructions as (
+select /*+ materialize */ length(linevalue) num
+from input_data
+where lineno = 1
+)
+,lr_instructions as (
+select /*+ materialize */
+  n.id move_number
+  , mod(n.id,x.num) mod_move
+  , n.column_value direction
+from input_data i, number_of_instructions x
+  ,lateral(select rownum id, column_value from table(string2rows(i.linevalue))) n
+where lineno = 1
+)
+, nodes as (
+select /*+ materialize */
+  lineno id
+--  ,linevalue
+  ,regexp_substr(linevalue,'\w{3}',1,1) node
+  ,regexp_substr(linevalue,'\w{3}',1,2) next_node_l
+  ,regexp_substr(linevalue,'\w{3}',1,3) next_node_r
+from input_data where lineno >= 3
+)
+, moves (
+    start_node, node, next_node_l, next_node_r
+    , move_number
+    , mod_move
+    , direction
+	, at_stopper
+  ) as (
+  select n.node start_node, n.node, n.next_node_l, n.next_node_r
+    , lr.move_number
+    , lr.mod_move
+    , lr.direction
+    , 0
+  from nodes n, lr_instructions lr, number_of_instructions i
+  where n.node like '__A'
+    and lr.mod_move = mod(1,i.num)
+  union all
+  select
+    m.start_node
+    ,n.node
+    , n.next_node_l, n.next_node_r
+    , m.move_number+1
+    , mod(m.move_number+1,i.num)
+    , lr.direction
+--	, decode(substr(n.node,3,1),'Z',1,0)
+	, sum(decode(substr(n.node,3,1),'Z',1,0)) over (partition by m.move_number)
+  from moves m, nodes n, lr_instructions lr, number_of_instructions i
+  where 1=1
+    and decode(m.direction,'L',m.NEXT_NODE_L,'R',m.NEXT_NODE_R) = n.node
+    and lr.mod_move = mod(m.move_number+1,i.num)
+--    and n.node not like '__Z'
+--    and m.node not like '__Z'
+    and m.at_stopper < 6
+    and m.move_number <= 1000000
+)
+select 
+--*
+    start_node
+	||' '|| node
+	||' '|| next_node_l
+	||' '|| next_node_r
+    ||' '|| move_number
+    ||' '|| mod_move
+    ||' '|| direction
+	||' '||at_stopper
+from moves
+where at_stopper > 1
+order by move_number desc, start_node fetch first 12 rows only
+/
+
+--------------- oh, none of this
+-- a ghost will eventually loop around
+-- so get it's end points
+-- then use those to find when they all are on a stopper at the same time
