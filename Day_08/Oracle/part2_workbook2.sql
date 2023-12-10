@@ -281,3 +281,84 @@ SLA	RPZ	TMV	HLN	11654	1	L	1
 SLA	RPZ	TMV	HLN	23307	1	L	1 diff 11653
 SLA	RPZ	TMV	HLN	34960	1	L	1 diff 11653
 */
+
+/* trace it out
+LR
+node	left	right
+11A	11B	XXX
+11B	XXX	11Z
+11Z	11B	XXX
+22A	22B	XXX
+22B	22C	22C
+22C	22Z	22Z
+22Z	22B	22B
+XXX	XXX	XXX
+
+L
+11A	11B
+11B	XXX
+11Z	11B
+22A	22B
+22B	22C
+22C	22Z
+22Z	22B
+XXX	XXX
+
+R
+11A	XXX
+11B	11Z
+11Z	XXX
+22A	XXX
+22B	22C
+22C	22Z
+22Z	22B
+XXX	XXX
+
+start	L	R	L	R	L	R
+11A L -> 11B R -> 11Z L -> 
+11B L -> XXX R -> XXX L -> 
+11Z L -> 11B R -> 11Z L -> 
+22A L -> 22B R -> 22C L -> 
+22B L -> 22C R -> 22Z L -> 
+22C L -> 22Z R -> 22B L -> 
+22Z L -> 22B R -> 22C L -> 
+XXX L -> XXX R -> XXX L -> 
+
+L	R	L	R	L	R
+XXX L -> XXX R -> XXX L -> 
+11B L -> XXX R -> XXX L -> (follow XXX)
+
+11Z L -> 11B R -> 11Z L -> 11B R -> 11Z L -> (follow 11A)
+11A L -> 11B R -> 11Z L -> 11B R -> 11Z L -> 11B R -> 11Z L -> 
+
+22A L -> 22B R -> 22C L -> 22Z R -> 22B L -> 22C R -> 22Z L -> 
+22Z L -> 22B R -> 22C L -> 22Z R -> 22B L -> 
+
+22B L -> 22C R -> 22Z L -> 22B R -> 22C L -> 22Z R -> 22B L -> 
+
+22C L -> 22Z R -> 22B L -> 22C R -> 22Z L -> 22B R -> 22C L -> 
+
+11A L -> 11B R -> 11Z L -> 11B R -> 11Z L -> 11B R -> 11Z L -> 
+22A L -> 22B R -> 22C L -> 22Z R -> 22B L -> 22C R -> 22Z L -> 
+
+so, looks like yes node AAA ->(instruction length)->BBB works fine
+*/
+
+-- I think simpler
+with starting_node as (select '11A' first_node from dual)
+, next_moves (node, move_number, next_node) as (
+  select n.node, i.move_number, decode(i.direction,'L',n.next_node_L,'R',n.next_node_r,'what') next_node
+  from nodes n, lr_instructions i, starting_node s
+  where n.node = s.first_node
+    and i.move_number = 1
+
+  union all
+
+  select m.node, m.move_number+1, decode(i.direction,'L',n.next_node_L,'R',n.next_node_r,'what')
+  from next_moves m, nodes n, lr_instructions i, number_of_instructions c
+  where m.next_node = n.node
+    and i.mod_move = mod(m.move_number,c.num)
+    and m.move_number < 10
+)
+select * from next_moves;
+
