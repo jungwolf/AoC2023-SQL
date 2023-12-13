@@ -27,3 +27,159 @@ where c=x, x(0) = 0, x(1) = y, and x(n+1)=x(n)-x(n-1) while x(n) > 0
 check:
 0 3 6 9 12 15
 c=0, x(1)=3
+*/
+-- whatever, let's look at the first line
+create or replace view seq_line_1 as 
+select
+  i.lineno history_id
+  , n.id seq_num
+  , n.column_value value
+from input_data i
+  ,lateral(select rownum id, column_value from table(string2rows(i.linevalue,' '))) n
+where i.lineno = 1
+;
+select * from seq_line_1;
+/*
+"HISTORY_ID"	"SEQ_NUM"	"VALUE"
+1	1	"0"
+1	2	"3"
+1	3	"6"
+1	4	"9"
+1	5	"12"
+1	6	"15"
+
+can we find the diffs all the way up the pyramid?
+0   3   6   9  12  15
+  3   3   3   3   3
+    0   0   0   0
+but ignore if they are all 0 because that's an extra test
+*/
+with a (history_id, seq_num, column_value, diff_level) as (
+  select history_id, seq_num, column_value, 0
+  from seq_line_1
+  
+  union all
+  
+  select history, seq_num
+    , lag(value,1) over (order by seq_num) - value
+    , diff_level +1
+  from a
+  where diff_level < 10
+)
+select * from a;
+
+------
+create or replace view seq_line_1 as 
+select
+  to_number(i.lineno) history_id
+  , n.id seq_num
+  , to_number(n.column_value) value
+from input_data i
+  ,lateral(select rownum id, column_value from table(string2rows(i.linevalue,' '))) n
+where i.lineno = 1
+;
+select * from seq_line_1;
+
+with a (history_id, seq_num, value, diff_level) as (
+  select history_id, seq_num, value, 0
+  from seq_line_1
+  
+  union all
+  
+  select history_id, seq_num
+    , lag(value,1) over (order by seq_num) - value
+    , diff_level +1
+  from a
+  where diff_level < 10
+)
+select * from a;
+
+---
+with a (history_id, seq_num, value, diff_level) as (
+  select history_id, seq_num, value, 0
+  from seq_line_1
+  
+  union all
+  
+  select history_id, seq_num
+    , value - lag(value,1) over (order by seq_num)
+    , diff_level +1
+  from a
+  where diff_level < 10
+    and value is not null
+)
+select * from a;
+/*
+HISTORY_ID	SEQ_NUM	VALUE	DIFF_LEVEL
+1	1	0	0
+1	2	3	0
+1	3	6	0
+1	4	9	0
+1	5	12	0
+1	6	15	0
+1	1		1
+1	2	3	1
+1	3	3	1
+1	4	3	1
+1	5	3	1
+1	6	3	1
+1	2		2
+1	3	0	2
+1	4	0	2
+1	5	0	2
+1	6	0	2
+1	3		3
+1	4	0	3
+1	5	0	3
+1	6	0	3
+1	4		4
+1	5	0	4
+1	6	0	4
+1	5		5
+1	6	0	5
+1	6		6
+*/
+
+create or replace view pyramid as 
+with a (history_id, seq_num, value, diff_level) as (
+  select history_id, seq_num, value, 0
+  from seq_line_1
+  
+  union all
+  
+  select history_id, seq_num
+    , value - lag(value,1) over (order by seq_num)
+    , diff_level +1
+  from a
+  where diff_level < 10
+--    and value is not null
+)
+select * from a
+where value is not null;
+select * from pyramid;
+
+select history_id, seq_num, value, diff_level
+  , max(seq_num) over (partition by diff_level)
+from pyramid;
+
+select history_id, seq_num, value, diff_level
+  , max(seq_num) over (partition by diff_level) end_diff
+from pyramid;
+
+select history_id, value, diff_level, end_diff
+from (
+select history_id, seq_num, value, diff_level
+  , max(seq_num) over (partition by diff_level) end_diff
+from pyramid
+)
+where seq_num = end_diff;
+
+select sum(value)
+from (
+select history_id, seq_num, value, diff_level
+  , max(seq_num) over (partition by diff_level) end_diff
+from pyramid
+)
+where seq_num = end_diff;
+-- 18
+-- um, I think I know why, but explaining it...
