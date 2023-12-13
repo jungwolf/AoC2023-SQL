@@ -273,3 +273,4 @@ where seq_num = end_diff
 group by history_id
 )
 ;
+
