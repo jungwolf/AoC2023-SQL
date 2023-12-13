@@ -362,3 +362,51 @@ with starting_node as (select '11A' first_node from dual)
 )
 select * from next_moves;
 
+-- did I break anything?
+create or replace synonym input_data for day08_example1;
+-- didn't work
+-- debugging
+with starting_node as (select 'AAA' first_node from dual)
+, next_moves (
+    node
+    , move_number
+    , real_mod_move
+    , expect_mod_move
+    , direction
+    , next_node_l
+    , next_node_r
+    , next_node
+  ) as (
+  select 
+    n.node
+    , i.move_number
+    , mod(1,c.num) 
+    , i.mod_move
+    , i.direction
+    , n.next_node_l
+    , n.next_node_r
+    , decode(i.direction,'L',n.next_node_L,'R',n.next_node_r,'what') next_node
+  from nodes n, lr_instructions i, starting_node s, number_of_instructions c
+  where n.node = s.first_node
+    and i.move_number = 1
+
+  union all
+
+  select 
+    n.node
+    , m.move_number+1
+    , mod(m.move_number+1,c.num) 
+    , i.mod_move
+    , i.direction
+    , n.next_node_l
+    , n.next_node_r
+    , decode(i.direction,'L',n.next_node_L,'R',n.next_node_r,'what')
+  from next_moves m, nodes n, lr_instructions i, number_of_instructions c
+  where m.next_node = n.node
+    and i.mod_move = mod(m.move_number+1,c.num)
+    and m.move_number < 10
+    and n.node != 'ZZZ'
+)
+select * from next_moves;
+-- worked for 1,2
+
