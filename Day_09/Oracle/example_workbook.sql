@@ -183,3 +183,93 @@ from pyramid
 where seq_num = end_diff;
 -- 18
 -- um, I think I know why, but explaining it...
+-- all of the last diffs plus the last seq number gives the next seq number...
+
+create or replace view sequences as 
+select
+  i.lineno history_id
+  , n.id seq_num
+  , n.column_value value
+from input_data i
+  ,lateral(select rownum id, column_value from table(string2rows(i.linevalue,' '))) n
+;
+select * from sequences;
+
+create or replace view sequences as 
+select
+  to_number(i.lineno) history_id
+  , n.id seq_num
+  , to_number(n.column_value) value
+from input_data i
+  ,lateral(select rownum id, column_value from table(string2rows(i.linevalue,' '))) n
+;
+select * from sequences;
+
+
+with a (history_id, seq_num, value, diff_level) as (
+  select history_id, seq_num, value, 0
+  from sequences
+  
+  union all
+  
+  select history_id, seq_num
+    , value - lag(value,1) over (partition by history_id order by seq_num)
+    , diff_level +1
+  from a
+  where diff_level < 10
+)
+select * from a
+;
+
+create or replace view pyramid as 
+with a (history_id, seq_num, value, diff_level) as (
+  select history_id, seq_num, value, 0
+  from sequences
+  
+  union all
+  
+  select history_id, seq_num
+    , value - lag(value,1) over (partition by history_id order by seq_num)
+    , diff_level +1
+  from a
+  where diff_level < 10
+)
+select * from a
+where value is not null
+/
+
+select * from pyramid;
+
+select history_id, seq_num, value, diff_level
+  , max(seq_num) over (partition by history_id, diff_level) end_diff
+from pyramid
+/
+
+select history_id, value, diff_level, end_diff
+from (
+select history_id, seq_num, value, diff_level
+  , max(seq_num) over (partition by history_id, diff_level) end_diff
+from pyramid
+)
+where seq_num = end_diff;
+
+select history_id, sum(value) the_sum
+from (
+select history_id, seq_num, value, diff_level
+  , max(seq_num) over (partition by diff_level) end_diff
+from pyramid
+)
+where seq_num = end_diff
+group by history_id;
+
+select sum(the_sum) from (
+select history_id, sum(value) the_sum
+from (
+select history_id, seq_num, value, diff_level
+  , max(seq_num) over (partition by diff_level) end_diff
+from pyramid
+)
+where seq_num = end_diff
+group by history_id
+)
+;
