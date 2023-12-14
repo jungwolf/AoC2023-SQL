@@ -3,6 +3,11 @@ create or replace synonym input_data for day09_example;
 
 select * from input_data;
 
+
+-- clear out any overlapping names...
+exec drop_object_if_exists('sequences','materialized view');
+exec drop_object_if_exists('pyramid','materialized view');
+
 -- get the elements
 select
   i.lineno history_id
