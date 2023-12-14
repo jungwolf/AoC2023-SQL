@@ -192,4 +192,24 @@ let's get more examples
    5  3  3  5  9 15
 5 10 13 16 21 30 45
 5
+
+
+ 0  0 => x0 = x1 - oldx0 =>  0  -  0 =  0
+ 3  3 -> x0 = x1 - oldx0 =>  3  -  0 =  3
+-3  0 -> x0 = x1 - oldx0 =>  0  -  3 = -3
+
+ 0  0 => x0 = x1 - oldx0 =>  0  -  0 =  0
+ 1  1 -> x0 = x1 - oldx0 =>  1  -  0 =  1
+ 1  2 -> x0 = x1 - oldx0 =>  2  -  1 =  1
+ 0  1 => x0 = x1 - oldx0 =>  1  -  1 =  0
+
+ 0  0 => x0 = x1 - oldx0 =>  0  -  0 =  0
+ 2  2 => x0 = x1 - oldx0 =>  2  -  0 =  2
+-2  0 => x0 = x1 - oldx0 =>  0  -  2 = -2
+ 5  3 => x0 = x1 - oldx0 =>  3  - -2 =  5
+ 5 10 => x0 = x1 - oldx0 => 10  -  5 =  5
+
+?? seq_num	diff_level	value	lagvalue	diff_val_lag
+?? value - lag(value,1) over (partition by history_id order by diff_level desc) diff_val_lag
+
 */
