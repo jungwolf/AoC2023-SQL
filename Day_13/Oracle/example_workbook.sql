@@ -151,3 +151,44 @@ expected:
 
 looks right
 */
+
+
+/*
+In the first pattern, the reflection is across a vertical line between two columns; arrows on each of the two columns point at the line between the columns:
+
+123456789
+    ><
+#.##..##.
+..#.##.#.
+##......#
+##......#
+..#.##.#.
+..##..##.
+#.#.##.#.
+    ><
+123456789
+In this pattern, the line of reflection is the vertical line between columns 5 and 6. Because the vertical line is not perfectly in the middle of the pattern, part of the pattern (column 1) has nowhere to reflect onto and can be ignored; every other column has a reflected column within the pattern and must match exactly: column 2 matches column 9, column 3 matches 8, 4 matches 7, and 5 matches 6.
+*/
+--select * from xline where mirror_id=0 order by x;
+select * from yline where mirror_id=0 order by y;
+-- between 5 and 6
+select y1.y, y1.y_line, y2.y, y2.y_line
+from yline y1, yline y2
+where y1.mirror_id=0
+  and y2.mirror_id=0
+  and y1.y_line = y2.y_line
+  and y1.y != y2.y
+order by y1.y, y2.y
+;
+
+/*
+Y	Y_LINE	Y_1	Y_LINE_1
+2	..##...	9	..##...
+3	##..###	8	##..###
+4	#....#.	7	#....#.
+5	.#..#.#	6	.#..#.#
+6	.#..#.#	5	.#..#.#
+7	#....#.	4	#....#.
+8	##..###	3	##..###
+9	..##...	2	..##...
+*/
