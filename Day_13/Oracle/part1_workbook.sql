@@ -314,10 +314,10 @@ from line_matches
 ;
 select * from b13 where the_count = the_max and the_row1 = the_max;
 
-create or replace view a as
+create or replace view a13 as
 select mirror_id, orientation, the_row1, the_row2, key, key/2 crease, tot
   , decode(orientation,'T',trunc(key/2),'B',tot-trunc(key/2),'L',trunc(key/2),'R',tot-trunc(key/2)) num_lines
   , decode(orientation,'T',100,'B',100,'L',1,'R',1) multiplier
 from b13
 where the_count = the_max and the_row1 = the_max;
-select sum(multiplier*num_lines) from a;
+select sum(multiplier*num_lines) from a13;
