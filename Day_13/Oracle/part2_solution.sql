@@ -42,7 +42,14 @@ select * from z
 /
 -- i don't think i need the not null clause, check it later
 
-
+/*
+generate all the possible smudged mirrors
+for each mirrorid, create new mirrors by replacing one piece with a smudged piece
+how does that work? keep in mind each mirror has cellid 1..max(pieces), length*width
+this is a Cartesian join for each mirrorid. for each cellid, we join to 1..max(cellid) copies.
+when left cellid = right cellid, replace the regular cell value with the smudge value
+now, each mirrorid is a group of mirrors, and smudgeid is a particular smudged version
+*/
 create or replace view smudged_xy as
 select xy1.mirror_id
   , xy2.cell_id smudge_id
@@ -54,7 +61,7 @@ from xy_s xy1, xy_s xy2
 where xy1.mirror_id = xy2.mirror_id
 /
 
-
+-- create all the smudged mirrors in the y direction
 create or replace view yline_s as
 with z as (
 select /*+ materialize */
@@ -67,7 +74,7 @@ group by mirror_id, smudge_id, y)
 select * from z
 /
 
-
+-- create all the smudged mirrors in the x direction
 create or replace view xline_s as
 with z as (
 select /*+ materialized */
@@ -80,7 +87,10 @@ group by mirror_id, smudge_id, x)
 select * from z;
 /
 
-
+-- look at the smudged mirrors in all directions, starting at top, bottom, left, right
+-- orientation shows which direction a row uses
+-- the_row is row number in that direction
+-- tot is total number of rows in that direction, useful later
 create or replace view all_orientations_s as
 select mirror_id, smudge_id, 'T' orientation
   , row_number() over (partition by mirror_id,smudge_id order by x) the_row
@@ -103,6 +113,11 @@ select mirror_id, smudge_id, 'R'
   , count(*) over (partition by mirror_id,smudge_id) tot
 from yline_s;
 
+-- for each smudged mirror, in each orientation, find all the rows that are the same
+-- don't include the row matched to itself
+-- key, when we're looking at a real mirror, is used to find the reflection line
+--   basically, all rows 1,2,3..maxmatch + maxmatch..3,2,1 have the same key value
+--   call them a key group
 create or replace view line_matches_s as
 select a1.mirror_id, a1.smudge_id, a1.orientation, a1.the_row the_row1, a1.the_line the_line1
   , a2.the_row the_row2, a2.the_line the_line2
@@ -115,15 +130,26 @@ where 1=1
   and a1.the_line = a2.the_line
   and a1.the_row != a2.the_row
 order by a1.mirror_id, a1.the_row, a1.the_row + a2.the_row;
-select * from line_matches_s order by mirror_id,smudge_id, orientation, key, the_row1;
-select count(*) from line_matches_s;
 
+-- within a key group, get the number of members and the max row number in the group
+-- so? if and only if, a key group includes row 1, the number of rows and the max row number will be the same
+--   i'm pretty sure i have the proof in a note
+-- for that max row, we've given it all the information needed for the solution
 create or replace view b13_s as
 select mirror_id, smudge_id, orientation, the_row1, the_line1, the_row2, the_line2, key, tot
   , count(*) over (partition by mirror_id,smudge_id, orientation, key) the_count
   , max(the_row1) over (partition by mirror_id,smudge_id, orientation, key) the_max
 from line_matches_s
 ;
+
+/* I trust the puzzle writers that there are one and only one new solutions for each mirror
+  for each mirrorid, there is one smudge mirror, in one orientation, with a solution
+based on the above view, the_count=the_max gives the winning keygroup
+  and the_max row has the necessary information
+key/2 gives the crease locaion, always between two rows so #.5
+orientation tells me how to find the number of row above or right of the crease
+  also tells me if it is *1 or *100 for the answer
+*/
 
 create or replace view a13_s as
 select mirror_id, smudge_id, orientation, the_row1, the_row2, key, key/2 crease, tot
@@ -133,10 +159,22 @@ from b13_s
 where the_count = the_max and the_row1 = the_max;
 select * from a13_s;
 
-
+-- the original part1 solution for a mirror might still be valid, so remove those
+-- i think that clause removed the duplicates so probably don't need the in-line view
+-- in any case, do the sum to get the answer
 select sum(multiplier*num_lines) from (
   select unique mirror_id, multiplier, num_lines from a13_s
   where (mirror_id, orientation, crease) not in (select mirror_id, orientation, crease from part1_solutions)
 )
 ;
 -- worked
+/*
+sql is a declaritive language, and the oracle sql engine includes an optimisation part to find the best way to generate the answer, called a plan
+in this case, view layered on view with heavy transformations, the oracle optimizer wasnt able to come up with a performant plan.
+a view can be "materialized", basically cached, meaning the plan creates temporary lookup table once it has the rows from the view.
+i gave it hints on what to materialize, so it wouldn't keep doing expensive parsing or computations.
+there is some judgement, you don't want to materialize millions of rows.
+initial parsing and row creation from a string is expensive if done millions of times, so materializing xy_s is an easy win
+smudging is pretty expensive, so caching the smudged xline and yline helps.
+*/
+
