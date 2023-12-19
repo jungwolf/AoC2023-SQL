@@ -1,5 +1,6 @@
 create or replace synonym input_data for day13_part1;
 
+-- use a running sum of empty lines to identify mirror groups.
 create or replace view numbered_mirrors as
 select
   to_number(lineno) lineno,
@@ -19,7 +20,12 @@ from numbered_mirrors
 where linevalue is not null
 /
 
+-- *_s views stand for smudge, to distinguish from the part1 views
+-- we'll need part1 to remove its solutions
 
+-- break out the individual mirror pieces with (x,y) positions
+-- add smudge, the cell value if it is smudged
+-- also added a unique cell_id for joining so not matching (x,y) all the time
 create or replace view xy_s as
 with z as (
 select /*+ materialize */
@@ -34,6 +40,8 @@ from xline x
 where x.x_line is not null)
 select * from z
 /
+-- i don't think i need the not null clause, check it later
+
 
 create or replace view smudged_xy as
 select xy1.mirror_id
