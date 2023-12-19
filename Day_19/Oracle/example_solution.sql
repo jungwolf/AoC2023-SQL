@@ -105,3 +105,50 @@ WF_ID	WF_NAME	WFR_ORDER	R_ATTR	R_COMPARE	R_VALUE	WF_DESTINATION
 2	pv	1	a	>	1716	R
 */
 -----------------------------------
+-- parts don't start at 1, so just picking the first part manually
+select * from parts_attrs where part_id = 13;
+/*
+PART_ID	ATTR	VALUE
+13	x	787
+13	m	2655
+13	a	1222
+13	s	2876
+*/
+select * from workflow_steps where wf_name = 'in';
+/*
+WF_ID	WF_NAME	WFR_ORDER	R_ATTR	R_COMPARE	R_VALUE	WF_DESTINATION
+8	in	1	s	<	1351	px
+8	in	2				qqz
+*/
+
+
+-- this will be the anchor of the recursive query
+select unique p.part_id, 'in' wf_name
+from parts_attrs p
+where p.part_id = 13
+/
+-- so this is the dynamic...
+with old_wf as (select unique p.part_id, 'in' wf_name from parts_attrs p where p.part_id = 13)
+select o.part_id, o.wf_name
+from old_wf o
+  , workflow_steps s
+  , parts_attrs p
+where o.part_id = p.part_id
+  and o.wf_name = s.wf_name;
+
+-- trying out case to handle the <>= part
+with old_wf as (select unique p.part_id, 'in' wf_name, 1 wfr_order from parts_attrs p where p.part_id = 13)
+select o.*, s.*, p.*
+, case s.r_compare when '<' then (p.value - s.r_value)
+    else p.value + s.r_value
+    end case
+from old_wf o
+  , workflow_steps s
+  , parts_attrs p
+where o.part_id = p.part_id
+  and o.wf_name = s.wf_name
+  and o.wfr_order = s.wfr_order
+  and p.attr = s.r_attr
+order by s.wfr_order;
+-- so, because s < 1351, next wf_name should be px
+
