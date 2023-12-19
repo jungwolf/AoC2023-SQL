@@ -1,5 +1,7 @@
 create or replace synonym input_data for day13_part1;
 
+-- check the bottom notes for information on materialized, it doesn't change the logic
+
 -- use a running sum of empty lines to identify mirror groups.
 create or replace view numbered_mirrors as
 select
@@ -170,7 +172,7 @@ select sum(multiplier*num_lines) from (
 -- worked
 /*
 sql is a declaritive language, and the oracle sql engine includes an optimisation part to find the best way to generate the answer, called a plan
-in this case, view layered on view with heavy transformations, the oracle optimizer wasnt able to come up with a performant plan.
+in this case, view layered on view with heavy transformations, the oracle optimizer wasn't able to come up with a performant plan.
 a view can be "materialized", basically cached, meaning the plan creates temporary lookup table once it has the rows from the view.
 i gave it hints on what to materialize, so it wouldn't keep doing expensive parsing or computations.
 there is some judgement, you don't want to materialize millions of rows.
