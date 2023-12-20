@@ -1,5 +1,5 @@
 
-
+-- divide input into two groups using count blank lines trick
 create or replace view workflows_and_parts as
 select
   to_number(lineno) lineno,
@@ -8,7 +8,12 @@ select
 from input_data
 /
 
-
+/*
+parts are the second input group, but started with the for some reason
+  not null to remove the blank line from group 1
+replace(string1,findstring[,replacestring]) -- replace a substring with another (default '')
+  removing curly braces, not needed since just splitting the line on ','
+*/
 create or replace view parts as
 select p.lineno part_id, n.column_value part_value
 from workflows_and_parts p
@@ -19,7 +24,9 @@ from workflows_and_parts p
 where p.linevalue is not null
   and p.group_id = 1
 ;
-
+-- left with x=16 s=87 etc lines
+-- split on = to give attributes and values
+-- assume attr is single character
 create or replace view parts_attrs as
 select part_id
   , substr(part_value,1,instr(part_value,'=')-1) attr
@@ -38,7 +45,7 @@ PART_ID	ATTR	VALUE
 -----------------------------------
 -- workflows
 
--- would be nice if A and R were terminal workflows, instead of just null rows
+-- 
 create or replace view workflow_rules as
 select lineno wf_id
 --  , instr(linevalue,'{')
@@ -47,6 +54,7 @@ select lineno wf_id
 from workflows_and_parts
 where linevalue is not null
   and group_id = 0
+-- would be nice if A and R were terminal workflows, instead of just null rows
 union all select -1,'A',null from dual
 union all select -2,'R',null from dual
 ;
@@ -54,8 +62,12 @@ select * from workflow_rules;
 --WF_ID	WF_NAME	WF_RULE
 --1	px	a<2006:qkq,m>2090:A,rfg
 --2	pv	a>1716:R,A
+-- turns out wf_id isn't needed
 
--- parse workflow, but leave wf_condistion for the next view, just to keep thinks a little simpler
+-- parse workflows
+--   but leave wf_condistion for the next view, just to keep thinks a little simpler
+-- using row_number() to start each workflow with step 1
+-- last default entry works due to the lack of a :
 create or replace view workflow_temp1 as
 select w.wf_id, w.wf_name
   , row_number() over (partition by w.wf_id order by rownum) wfr_order
@@ -73,7 +85,9 @@ WF_ID	WF_NAME	WFR_ORDER	WF_CONDITION	WF_DESTINATION
 2	pv	1	a>1716	R
 */ 
 
--- add "compare" D, meaning it is the default and should be taken
+-- sql doesn't have a compute string function, so '1+3' is surprisingly hard to work with
+-- so separating out the attribute, comparison, and constant into columns
+-- add "compare" D, meaning it is the default and should be taken whenever encountered
 create or replace view workflow_steps as
 select s.wf_id, s.wf_name, s.wfr_order
   , substr(wf_condition,1,1) r_attr
