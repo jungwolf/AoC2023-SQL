@@ -4,4 +4,115 @@
 create or replace synonym input_data for day19_example;
 
 
+create or replace view workflows_and_parts as
+select
+  to_number(lineno) lineno,
+  linevalue,
+  sum(nvl2(linevalue,0,1)) over (order by lineno rows between unbounded preceding and current row) group_id
+from input_data
+/
+select * from workflows_and_parts;
 
+create or replace view workflow_sub1 as
+select w.wf_id, w.wf_name
+  , row_number() over (partition by w.wf_id order by rownum) wfr_order
+--  , n.column_value wfr_attr
+--  , instr(n.column_value,':')
+  , substr(n.column_value,1,instr(n.column_value,':')-1) wf_condition
+  , substr(n.column_value,instr(n.column_value,':')+1) wf_destination
+--  , count(*) over (partition by w.wf_id) wfr_default_attr
+from workflow_rules w
+  ,lateral(select rownum, column_value from table(string2rows(w.wf_rule,','))) n
+;
+select * from workflow_sub1;
+
+
+create or replace view workflow_steps as
+select s.wf_id, s.wf_name, s.wfr_order
+  , substr(wf_condition,1,1) r_attr
+  , nvl(substr(wf_condition,2,1),'D') r_compare
+  , to_number(substr(wf_condition,3)) r_value
+  , s.wf_destination
+from workflow_sub1 s
+;
+select * from workflow_steps;
+
+/*
+wf_id	wf_name	wfr_order	r_attr	r_compare	r_value	wf_destination
+-2	R	1		D		
+-1	A	1		D		
+1	px	1	a	<	2006	qkq
+1	px	2	m	>	2090	A
+1	px	3		D		rfg
+2	pv	1	a	>	1716	R
+...
+*/
+
+
+
+
+
+with a (part_id, wf_name, wfr_order, r_attr, r_compare, r_value, value, wf_d, expr, lvl) as (
+  select p.part_id, wf.wf_name, wf.wfr_order, wf.r_attr, wf.r_compare, wf.r_value, p.value, wf.wf_destination
+  , case wf.r_compare
+      when '<' then nvl((select wf.wf_destination from dual where p.value < wf.r_value),wf.wf_name)
+      when '=' then nvl((select wf.wf_destination from dual where p.value = wf.r_value),wf.wf_name)
+      when '>' then nvl((select wf.wf_destination from dual where p.value > wf.r_value),wf.wf_name)
+      when 'D' then wf.wf_destination
+    end expr
+  , 0
+  from parts_attrs p, workflow_steps wf
+  where 1=1
+--    and p.part_id in (14,13)
+    and wf.wf_name = 'in'
+    and wf.wfr_order = 1
+    and wf.r_attr = p.attr
+
+  union all
+
+  select a.part_id, wf.wf_name, wf.wfr_order, wf.r_attr, wf.r_compare, wf.r_value, a.value, wf.wf_destination
+  , case wf.r_compare
+      when '<' then nvl((select wf.wf_destination from dual where p.value < wf.r_value),wf.wf_name)
+      when '=' then nvl((select wf.wf_destination from dual where p.value = wf.r_value),wf.wf_name)
+      when '>' then nvl((select wf.wf_destination from dual where p.value > wf.r_value),wf.wf_name)
+      when 'D' then wf.wf_destination
+    end expr
+    , lvl+1
+  from parts_attrs p, workflow_steps wf, a
+  where a.part_id = p.part_id (+)
+    and wf.wf_name = a.expr
+-- if on a new destination, restart order
+    and wf.wfr_order = decode(a.expr,a.wf_name,a.wfr_order+1,1)
+    and wf.r_attr = p. attr (+)
+    and a.lvl < 10
+)
+select * from a,parts_attrs p where wf_name in ('A') and a.part_id = p.part_id;
+--19114
+
+
+with a (wf_name, wfr_order, r_attr, r_compare, r_value, wf_destination) as (
+select wf_name, wfr_order, r_attr, r_compare, r_value, wf_destination
+from workflow_steps
+where wf_name = 'in'
+)
+select * from a;
+
+select wf_name, wfr_order, r_attr, r_compare, r_value, wf_destination
+from workflow_steps
+where wf_name = 'in'
+order by wf_name, wfr_order;
+
+with a (wf_name, wfr_order, r_attr, r_compare, r_value, wf_destination, lvl) as (
+  select wf_name, wfr_order, r_attr, r_compare, r_value, wf_destination, 1
+  from workflow_steps
+  where wf_name = 'in'
+
+  union all
+
+  select w.wf_name, w.wfr_order, w.r_attr, w.r_compare, w.r_value, w.wf_destination, a.lvl+1
+  from a, workflow_steps w
+  where a.wf_destination = w.wf_name
+    and w.wf_name not in ('A','R')
+
+)
+select * from a;
